@@ -1,5 +1,10 @@
 name: Bé O Prompt Evaluation (manual)
 on:
+  push:
+    branches: ['feature/be-o-expert-reasoning-v3']
+    paths:
+      - '_PROMPT_FRAMEWORKS/**'
+      - '.github/workflows/beo-prompt-eval.yml'
   workflow_dispatch:
     inputs:
       model:
