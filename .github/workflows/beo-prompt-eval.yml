@@ -1,0 +1,58 @@
+name: Bé O Prompt Evaluation (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Pinned model ID for both v2 and v3 (e.g. gpt-4.1-mini)"
+        required: true
+        type: string
+      run_inference:
+        description: "Run 36 live API requests. Requires OPENAI_API_KEY secret and usage approval."
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate frozen inputs and case coverage (NO LLM)
+        run: python _PROMPT_FRAMEWORKS/evals/eval_runner.py validate
+      - name: Install inference SDK (only if explicitly selected)
+        if: inputs.run_inference
+        run: python -m pip install 'openai>=1.0.0,<4'
+      - name: Verify approved key presence (without revealing it)
+        if: inputs.run_inference
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::OPENAI_API_KEY secret not configured. No inference was made."
+            exit 1
+          fi
+      - name: Execute frozen v2-v3 A/B (36 calls maximum)
+        if: inputs.run_inference
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODEL_ID: ${{ inputs.model }}
+        run: |
+          python _PROMPT_FRAMEWORKS/evals/eval_runner.py run --model "$MODEL_ID" --out results/raw.jsonl
+          python _PROMPT_FRAMEWORKS/evals/eval_runner.py blind --raw results/raw.jsonl --out results/blind.jsonl
+      - name: Upload raw evidence (private run artifacts)
+        if: inputs.run_inference && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beo-eval-evidence
+          path: |
+            results/raw.jsonl
+            results/blind.jsonl
+            results/blind.mapping.private.json
+          retention-days: 14
+          if-no-files-found: warn
