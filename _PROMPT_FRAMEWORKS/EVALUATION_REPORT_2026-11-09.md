@@ -41,3 +41,21 @@ A01 giải thích RAG bằng Feynman; A02 chỉ hỏi một câu Socratic mỗi 
 
 ## Ghi chú khả năng thực thi
 Đã kiểm tra công cụ hiện tại: có GitHub read/write và Plugin Creator read/update, nhưng không có endpoint gọi LLM độc lập để chạy ma trận A/B trong cùng phiên; môi trường local không có API key/runner LLM. Vì vậy bước tiếp theo là chạy suite trên môi trường có API/runner và đưa raw outputs + điểm về PR để hậu kiểm, sau đó mới yêu cầu cập nhật release bằng Plugin Creator. Không đặt PASS cho test chưa chạy.
+
+
+## Bổ sung kiểm thử độc lập — vòng triển khai tiếp theo (2026-11-09)
+
+**Đã triển khai có kiểm chứng trên GitHub:**
+- Baseline v2.0 đóng băng: `BASELINE_V2_FROZEN.md`.
+- 18 bài test giả lập (6 y khoa, 6 quản trị bệnh viện, 6 đào tạo AI): `evals/cases.json`.
+- Runner dùng OpenAI Responses API: `evals/eval_runner.py`, yêu cầu API key riêng và model được chỉ định, không ghi đè kết quả cũ.
+- Mã hóa phiên bản ẩn cho người chấm; giữ mapping riêng; rubric tổng 100 và cổng chặn critical; log raw response, model, SHA prompt, token usage, thời gian.
+- GitHub Actions: `.github/workflows/beo-prompt-eval.yml`. Push nhánh feature dùng để kiểm tra cấu trúc khi Actions kích hoạt; inference cần bật thủ công và phải có API key.
+- 13/13 kiểm tra **cấu trúc bằng công cụ GitHub** thành công: 18 ca không trùng, 6 ca/nhóm, dữ liệu giả lập, cấu trúc bảo vệ API key, kiểm soát cặp đối chứng, phê duyệt con người, tài liệu phiên bản và workflow.
+
+**Chưa thực hiện:**
+- 0/36 lần gọi inference độc lập; chưa có raw model responses; 0/36 bài được người đánh giá chấm.
+- Chưa có báo cáo A/B so sánh thực nghiệm; chưa có kết quả CI Actions được xác nhận. Truy vấn workflow runs cho SHA `95e807193dd2c9b49e2d7d85c3893feed628c616` trả về danh sách rỗng.
+- Chưa nâng cấp plugin Bé O Trung tâm, vẫn ở release v1.0.1. **HOLD** theo tiêu chí kiểm định do người dùng đặt.
+
+**Lưu ý hạn chế:** Kiểm tra sự hiện diện quy tắc/nguồn mã không chứng minh chương trình đã chạy đầu-cuối, không chứng minh hoạt động suy luận LLM và không cung cấp bằng chứng v3 vượt v2. Để chạy trước khi merge, dùng local/private runner có API key; workflow_dispatch chỉ hoạt động khi file workflow đã có trên default branch.
